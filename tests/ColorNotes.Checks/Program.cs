@@ -45,6 +45,21 @@ try
     copy.ChecklistItems[0].Text = "Changed";
     Require(original.ChecklistItems[0].Text == "Build", "Note.Copy must be a deep copy.");
 
+    var storeDirectory = Path.Combine(checkDirectory, "store");
+    var store = new NoteStore(storeDirectory);
+    await store.SaveAsync([original]);
+    var firstLoad = await store.LoadAsync();
+    Require(firstLoad.Count == 1 && firstLoad[0].Id == original.Id, "Live store failed to reload a saved note.");
+
+    var changed = original.Copy();
+    changed.Title = "Newer title";
+    changed.UpdatedAt = changed.UpdatedAt.AddMinutes(1);
+    await store.SaveAsync([changed]);
+    await File.WriteAllTextAsync(Path.Combine(storeDirectory, "notes.json"), "{corrupted");
+    var recovered = await store.LoadAsync();
+    Require(recovered.Count == 1, "Store did not recover from its backup.");
+    Require(recovered[0].Title == original.Title, "Store recovery did not use the last valid snapshot.");
+
     Console.WriteLine("Color Notes checks passed.");
 }
 finally
@@ -56,4 +71,3 @@ static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
 }
-
