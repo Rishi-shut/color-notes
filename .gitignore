@@ -7,4 +7,5 @@ obj/
 artifacts/
 TestResults/
 .dotnet/
+.dotnet-home/
 .tools/

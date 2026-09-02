@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.IO;
 using ColorNotes.Models;
 
 namespace ColorNotes.Services;
@@ -76,4 +77,3 @@ public sealed class NoteStore
         }
     }
 }
-

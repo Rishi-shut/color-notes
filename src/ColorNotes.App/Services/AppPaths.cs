@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace ColorNotes.Services;
 
 public static class AppPaths
@@ -9,4 +11,3 @@ public static class AppPaths
     public static string NotesFile { get; } = Path.Combine(DataDirectory, "notes.json");
     public static string BackupFile { get; } = Path.Combine(DataDirectory, "notes.backup.json");
 }
-
