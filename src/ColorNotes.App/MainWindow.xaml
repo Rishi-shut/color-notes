@@ -119,16 +119,20 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="1">
-                    <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Notes">
+                    <Button Command="{Binding SelectSectionCommand}" CommandParameter="Notes">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}"><Style.Triggers><DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Notes}"><Setter Property="Background" Value="#1BFFD453" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE70B;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Notes" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Reminders">
+                    <Button Command="{Binding SelectSectionCommand}" CommandParameter="Reminders">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}"><Style.Triggers><DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Reminders}"><Setter Property="Background" Value="#1BFFD453" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE823;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Reminders" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Archive">
+                    <Button Command="{Binding SelectSectionCommand}" CommandParameter="Archive">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}"><Style.Triggers><DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Archive}"><Setter Property="Background" Value="#1BFFD453" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
                         <StackPanel Orientation="Horizontal"><TextBlock Text="▣" FontFamily="Segoe UI Symbol" Width="28" /><TextBlock Text="Archive" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Trash">
+                    <Button Command="{Binding SelectSectionCommand}" CommandParameter="Trash">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}"><Style.Triggers><DataTrigger Binding="{Binding Section}" Value="{x:Static vm:NavigationSection.Trash}"><Setter Property="Background" Value="#1BFFD453" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Trash" /></StackPanel>
                     </Button>
                 </StackPanel>
@@ -165,6 +169,9 @@
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="38" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                         <TextBlock Text="" FontFamily="Segoe MDL2 Assets" Foreground="#FF8B8178" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="Search notes" Foreground="#FF9B9289" VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SearchText}" Value=""><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                        </TextBlock>
                         <TextBox x:Name="SearchBox" Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center" Padding="0,0,10,0"
                                  FontSize="13" Foreground="#FF292622" ToolTip="Search all text in this section (Ctrl+F)" />
@@ -253,7 +260,7 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="44,36,44,24">
                 <StackPanel MaxWidth="760">
-                    <TextBox Text="{Binding SelectedNote.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource EditorTextBox}"
+                    <TextBox x:Name="TitleBox" Text="{Binding SelectedNote.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource EditorTextBox}"
                              FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" AcceptsReturn="False"
                              AutomationProperties.Name="Note title" />
                     <TextBlock Text="{Binding SelectedNote.UpdatedLabel, StringFormat=Edited {0}}" Margin="1,8,0,24" FontSize="11" Foreground="#9A514B45" />

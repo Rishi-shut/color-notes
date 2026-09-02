@@ -18,6 +18,11 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        _viewModel.NoteCreated += _ => Dispatcher.BeginInvoke(() =>
+        {
+            TitleBox.Focus();
+            TitleBox.SelectAll();
+        }, DispatcherPriority.Input);
         _reminderTimer.Tick += (_, _) => ShowDueReminders();
     }
 

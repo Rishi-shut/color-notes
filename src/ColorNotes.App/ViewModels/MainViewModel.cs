@@ -97,6 +97,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand SetColorCommand { get; }
     public RelayCommand AddChecklistItemCommand { get; }
     public RelayCommand RemoveChecklistItemCommand { get; }
+    public event Action<NoteViewModel>? NoteCreated;
 
     public async Task InitializeAsync()
     {
@@ -125,6 +126,7 @@ public sealed class MainViewModel : ObservableObject
         if (kind == NoteKind.Checklist) viewModel.AddChecklistItem();
         NotesView.Refresh();
         SelectedNote = viewModel;
+        NoteCreated?.Invoke(viewModel);
         ScheduleSave();
     }
 
