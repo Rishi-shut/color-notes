@@ -5,7 +5,7 @@ const title = 'Color Notes — your quiet corner';
 const description = 'A fast, private notes space that works beautifully online and offline.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.SITE_URL || 'https://color-notes-private.mriganksingh792005.chatgpt.site'),
   title,
   description,
   applicationName: 'Color Notes',
