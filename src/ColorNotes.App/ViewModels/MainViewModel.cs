@@ -14,6 +14,7 @@ public sealed class MainViewModel : ObservableObject
     private NavigationSection _section;
     private string _searchText = string.Empty;
     private bool _isLoaded;
+    private NoteSortMode _sortMode;
 
     public MainViewModel(NoteStore store)
     {
@@ -21,8 +22,7 @@ public sealed class MainViewModel : ObservableObject
         Notes = [];
         NotesView = CollectionViewSource.GetDefaultView(Notes);
         NotesView.Filter = FilterNote;
-        NotesView.SortDescriptions.Add(new SortDescription(nameof(NoteViewModel.IsPinned), ListSortDirection.Descending));
-        NotesView.SortDescriptions.Add(new SortDescription(nameof(NoteViewModel.UpdatedAt), ListSortDirection.Descending));
+        ApplySort();
 
         NewTextNoteCommand = new RelayCommand(_ => CreateNote(NoteKind.Text));
         NewChecklistCommand = new RelayCommand(_ => CreateNote(NoteKind.Checklist));
@@ -78,6 +78,15 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public bool HasSelection => SelectedNote is not null;
+    public NoteSortMode SortMode
+    {
+        get => _sortMode;
+        set
+        {
+            if (!SetProperty(ref _sortMode, value)) return;
+            ApplySort();
+        }
+    }
     public string SectionTitle => Section switch
     {
         NavigationSection.Reminders => "Reminders",
@@ -295,5 +304,21 @@ public sealed class MainViewModel : ObservableObject
         RestoreCommand.RaiseCanExecuteChanged();
         DeleteForeverCommand.RaiseCanExecuteChanged();
         SetColorCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ApplySort()
+    {
+        using (NotesView.DeferRefresh())
+        {
+            NotesView.SortDescriptions.Clear();
+            NotesView.SortDescriptions.Add(new SortDescription(nameof(NoteViewModel.IsPinned), ListSortDirection.Descending));
+            NotesView.SortDescriptions.Add(SortMode switch
+            {
+                NoteSortMode.Created => new SortDescription(nameof(NoteViewModel.CreatedAt), ListSortDirection.Descending),
+                NoteSortMode.Title => new SortDescription(nameof(NoteViewModel.DisplayTitle), ListSortDirection.Ascending),
+                NoteSortMode.Color => new SortDescription(nameof(NoteViewModel.Color), ListSortDirection.Ascending),
+                _ => new SortDescription(nameof(NoteViewModel.UpdatedAt), ListSortDirection.Descending)
+            });
+        }
     }
 }

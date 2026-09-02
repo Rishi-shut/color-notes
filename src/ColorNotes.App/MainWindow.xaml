@@ -170,6 +170,16 @@
                 <DockPanel Margin="20,22,16,12">
                     <TextBlock Text="{Binding SectionTitle}" FontSize="22" FontWeight="SemiBold" Foreground="#FF292622" VerticalAlignment="Center" />
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource IconButton}" ToolTip="Sort notes" Content="&#xE8CB;" Click="SortMenu_Click">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Recently modified" Tag="Modified" Click="SortNotes_Click" />
+                                    <MenuItem Header="Recently created" Tag="Created" Click="SortNotes_Click" />
+                                    <MenuItem Header="Title (A–Z)" Tag="Title" Click="SortNotes_Click" />
+                                    <MenuItem Header="Note color" Tag="Color" Click="SortNotes_Click" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                         <Button Style="{StaticResource IconButton}" ToolTip="New checklist (Ctrl+Shift+N)" Command="{Binding NewChecklistCommand}" Content="☑" FontFamily="Segoe UI Symbol" />
                         <Button Style="{StaticResource IconButton}" ToolTip="New note (Ctrl+N)" Command="{Binding NewTextNoteCommand}" Content="&#xE710;" Background="#FFFFD453" />
                     </StackPanel>

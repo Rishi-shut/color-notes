@@ -62,6 +62,7 @@ public sealed class NoteViewModel : ObservableObject
     }
 
     public DateTimeOffset UpdatedAt => _note.UpdatedAt;
+    public DateTimeOffset CreatedAt => _note.CreatedAt;
     public string Preview => _note.Preview;
     public bool IsChecklist => Kind == NoteKind.Checklist;
     public bool IsTextNote => Kind == NoteKind.Text;

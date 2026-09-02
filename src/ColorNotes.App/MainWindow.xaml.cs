@@ -73,6 +73,30 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SortMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.ContextMenu is { } menu)
+        {
+            foreach (var item in menu.Items.OfType<System.Windows.Controls.MenuItem>())
+            {
+                item.IsChecked = Enum.TryParse<NoteSortMode>(item.Tag?.ToString(), out var mode)
+                                 && mode == _viewModel.SortMode;
+            }
+
+            menu.PlacementTarget = element;
+            menu.IsOpen = true;
+        }
+    }
+
+    private void SortNotes_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.MenuItem item
+            && Enum.TryParse<NoteSortMode>(item.Tag?.ToString(), out var mode))
+        {
+            _viewModel.SortMode = mode;
+        }
+    }
+
     private async void ExportNotes_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog
