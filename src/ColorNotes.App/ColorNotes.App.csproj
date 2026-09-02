@@ -8,6 +8,11 @@
     <AssemblyName>ColorNotes</AssemblyName>
     <RootNamespace>ColorNotes</RootNamespace>
     <ApplicationIcon>Assets\ColorNotes.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <Product>Color Notes</Product>
+    <Description>A fast, private, offline-first notes app for Windows.</Description>
+    <Authors>Rishi</Authors>
+    <Copyright>Copyright © 2026</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets\ColorNotes.png" />
