@@ -118,6 +118,35 @@ public sealed class MainViewModel : ObservableObject
         await _store.SaveAsync(Notes.Select(note => note.Model));
     }
 
+    public (int Added, int Updated) MergeImportedNotes(IEnumerable<Note> importedNotes)
+    {
+        var added = 0;
+        var updated = 0;
+
+        foreach (var imported in importedNotes.GroupBy(note => note.Id).Select(group => group.MaxBy(note => note.UpdatedAt)!))
+        {
+            var existing = Notes.FirstOrDefault(note => note.Id == imported.Id);
+            if (existing is null)
+            {
+                AddNoteViewModel(imported.Copy());
+                added++;
+                continue;
+            }
+
+            if (imported.UpdatedAt <= existing.UpdatedAt) continue;
+            var wasSelected = SelectedNote == existing;
+            Notes.Remove(existing);
+            var replacement = AddNoteViewModel(imported.Copy());
+            if (wasSelected) SelectedNote = replacement;
+            updated++;
+        }
+
+        NotesView.Refresh();
+        SelectFirstVisible();
+        ScheduleSave();
+        return (added, updated);
+    }
+
     private void CreateNote(NoteKind kind)
     {
         Section = NavigationSection.Notes;

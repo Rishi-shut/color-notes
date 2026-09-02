@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using ColorNotes.Services;
 using ColorNotes.ViewModels;
 
@@ -10,6 +11,7 @@ namespace ColorNotes;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel = new(new NoteStore());
+    private readonly NoteBackupService _backupService = new();
     private readonly DispatcherTimer _reminderTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly HashSet<Guid> _shownReminders = [];
     private bool _isClosing;
@@ -59,6 +61,65 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             note.ReminderAt = null;
+        }
+    }
+
+    private void BackupMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.ContextMenu is { } menu)
+        {
+            menu.PlacementTarget = element;
+            menu.IsOpen = true;
+        }
+    }
+
+    private async void ExportNotes_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export Color Notes backup",
+            Filter = "Color Notes backup (*.colornotes)|*.colornotes",
+            FileName = $"ColorNotes-{DateTime.Now:yyyy-MM-dd}.colornotes",
+            AddExtension = true,
+            DefaultExt = ".colornotes"
+        };
+
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            await _backupService.ExportAsync(dialog.FileName, _viewModel.Notes.Select(note => note.Model));
+            MessageBox.Show(this, "Your notes were exported successfully.", "Backup complete",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(this, $"The backup could not be created.\n\n{exception.Message}", "Backup failed",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void ImportNotes_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import Color Notes backup",
+            Filter = "Color Notes backup (*.colornotes)|*.colornotes|JSON files (*.json)|*.json",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var notes = await _backupService.ImportAsync(dialog.FileName);
+            var result = _viewModel.MergeImportedNotes(notes);
+            await _viewModel.SaveNowAsync();
+            MessageBox.Show(this, $"Import complete: {result.Added} added, {result.Updated} updated.", "Backup restored",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(this, $"This backup could not be imported.\n\n{exception.Message}", "Import failed",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

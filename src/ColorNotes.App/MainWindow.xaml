@@ -142,6 +142,16 @@
                         <TextBlock Text="QUICK CAPTURE" FontSize="10" FontWeight="SemiBold" Foreground="#FF8B8178" />
                         <TextBlock Text="Ctrl + N" Margin="0,7,0,0" Foreground="#FF514B45" FontSize="12" />
                         <TextBlock Text="New text note" Foreground="#FF8B8178" FontSize="11" />
+                        <Border Height="1" Background="#16000000" Margin="0,11,0,8" />
+                        <Button Content="Backup &amp; restore" HorizontalAlignment="Left" Padding="0,4" Background="Transparent"
+                                BorderThickness="0" Foreground="#FF514B45" Cursor="Hand" Click="BackupMenu_Click">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Export all notes…" Click="ExportNotes_Click" />
+                                    <MenuItem Header="Import backup…" Click="ImportNotes_Click" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>
