@@ -241,13 +241,14 @@ public sealed class MainViewModel : ObservableObject
         _saveDelay?.Dispose();
         _saveDelay = new CancellationTokenSource();
         var cancellationToken = _saveDelay.Token;
+        var snapshot = Notes.Select(note => note.Model.Copy()).ToList();
 
         _ = Task.Run(async () =>
         {
             try
             {
                 await Task.Delay(450, cancellationToken);
-                await _store.SaveAsync(Notes.Select(note => note.Model), cancellationToken);
+                await _store.SaveAsync(snapshot, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -265,4 +266,3 @@ public sealed class MainViewModel : ObservableObject
         SetColorCommand.RaiseCanExecuteChanged();
     }
 }
-

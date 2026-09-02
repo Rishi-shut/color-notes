@@ -1,0 +1,40 @@
+<Window x:Class="ColorNotes.ReminderDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Set reminder" Width="380" Height="300" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="#FFFCFAF7" FontFamily="Segoe UI Variable, Segoe UI">
+    <Grid Margin="28,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Remind me" FontSize="22" FontWeight="SemiBold" Foreground="#FF292622" />
+        <TextBlock Grid.Row="1" Text="Choose a local date and time." Margin="0,5,0,18" Foreground="#FF7C7269" />
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,10,0">
+                <TextBlock Text="DATE" FontSize="10" FontWeight="SemiBold" Foreground="#FF8B8178" Margin="0,0,0,5" />
+                <DatePicker x:Name="ReminderDate" Height="36" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="TIME" FontSize="10" FontWeight="SemiBold" Foreground="#FF8B8178" Margin="0,0,0,5" />
+                <TextBox x:Name="ReminderTime" Height="36" VerticalContentAlignment="Center" Padding="9,0" ToolTip="Example: 9:30 AM" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="ValidationText" Grid.Row="3" Margin="0,12,0,0" Foreground="#FFB33A3A" FontSize="11" />
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Width="82" Height="36" Margin="0,0,8,0" Click="Cancel_Click" />
+            <Button Content="Set reminder" Width="110" Height="36" Background="#FFFFD453" BorderThickness="0"
+                    FontWeight="SemiBold" Click="Save_Click" IsDefault="True" />
+        </StackPanel>
+    </Grid>
+</Window>
+

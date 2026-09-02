@@ -110,8 +110,7 @@
                 <StackPanel Margin="22,25,18,20">
                     <StackPanel Orientation="Horizontal">
                         <Border Width="34" Height="34" CornerRadius="10" Background="#FFFFD453">
-                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF433A20" />
+                            <Image Source="Assets/ColorNotes.png" Margin="4" />
                         </Border>
                         <TextBlock Text="Color Notes" Margin="10,0,0,0" FontWeight="SemiBold" FontSize="17"
                                    VerticalAlignment="Center" Foreground="#FF292622" />
@@ -121,16 +120,16 @@
 
                 <StackPanel Grid.Row="1">
                     <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Notes">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Notes" /></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE70B;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Notes" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Reminders">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Reminders" /></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE823;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Reminders" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Archive">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Archive" /></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="▣" FontFamily="Segoe UI Symbol" Width="28" /><TextBlock Text="Archive" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavButton}" Command="{Binding SelectSectionCommand}" CommandParameter="Trash">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Trash" /></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Width="28" /><TextBlock Text="Trash" /></StackPanel>
                     </Button>
                 </StackPanel>
 
@@ -157,8 +156,8 @@
                 <DockPanel Margin="20,22,16,12">
                     <TextBlock Text="{Binding SectionTitle}" FontSize="22" FontWeight="SemiBold" Foreground="#FF292622" VerticalAlignment="Center" />
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Style="{StaticResource IconButton}" ToolTip="New checklist (Ctrl+Shift+N)" Command="{Binding NewChecklistCommand}" Content="" />
-                        <Button Style="{StaticResource IconButton}" ToolTip="New note (Ctrl+N)" Command="{Binding NewTextNoteCommand}" Content="" Background="#FFFFD453" />
+                        <Button Style="{StaticResource IconButton}" ToolTip="New checklist (Ctrl+Shift+N)" Command="{Binding NewChecklistCommand}" Content="☑" FontFamily="Segoe UI Symbol" />
+                        <Button Style="{StaticResource IconButton}" ToolTip="New note (Ctrl+N)" Command="{Binding NewTextNoteCommand}" Content="&#xE710;" Background="#FFFFD453" />
                     </StackPanel>
                 </DockPanel>
 
@@ -211,7 +210,7 @@
                                     <TextBlock Grid.Row="1" Text="{Binding Preview}" Margin="0,7,0,0" FontSize="12" Foreground="#B8504942"
                                                MaxHeight="38" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
                                     <StackPanel Grid.Row="2" Margin="0,10,0,0" Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Kind, Converter={StaticResource NoteKindGlyph}}" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="#FF7C7269" />
+                                        <TextBlock Text="{Binding Kind, Converter={StaticResource NoteKindGlyph}}" FontFamily="Segoe UI Symbol" FontSize="11" Foreground="#FF7C7269" />
                                         <TextBlock Text="{Binding UpdatedLabel}" Margin="6,0,0,0" FontSize="10" Foreground="#FF7C7269" />
                                     </StackPanel>
                                 </Grid>
@@ -240,9 +239,10 @@
             <Border BorderBrush="#14000000" BorderThickness="0,0,0,1">
                 <DockPanel Margin="18,0">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource IconButton}" Content="" ToolTip="Pin or unpin" Command="{Binding TogglePinCommand}" />
-                        <Button Style="{StaticResource IconButton}" Content="" ToolTip="Archive or unarchive" Command="{Binding ArchiveCommand}" />
-                        <Button Style="{StaticResource IconButton}" Content="" ToolTip="Move to trash" Command="{Binding TrashCommand}" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE823;" ToolTip="Set reminder" Click="Reminder_Click" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE718;" ToolTip="Pin or unpin" Command="{Binding TogglePinCommand}" />
+                        <Button Style="{StaticResource IconButton}" Content="▣" FontFamily="Segoe UI Symbol" ToolTip="Archive or unarchive" Command="{Binding ArchiveCommand}" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Move to trash" Command="{Binding TrashCommand}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Ellipse Width="9" Height="9" Fill="#77382F25" />
@@ -290,7 +290,7 @@
                                                 </Style>
                                             </TextBox.Style>
                                         </TextBox>
-                                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="30" Height="30" Content=""
+                                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="30" Height="30" Content="&#xE74D;"
                                                 ToolTip="Remove item" Command="{Binding DataContext.RemoveChecklistItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}" />
                                     </Grid>
@@ -299,7 +299,7 @@
                         </ItemsControl>
                         <Button Command="{Binding AddChecklistItemCommand}" Margin="28,10,0,0" HorizontalAlignment="Left" Background="Transparent"
                                 BorderThickness="0" Foreground="#CC514B45" Padding="4" Cursor="Hand">
-                            <StackPanel Orientation="Horizontal"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" /><TextBlock Text=" Add item" Margin="7,0,0,0" /></StackPanel>
+                            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" /><TextBlock Text=" Add item" Margin="7,0,0,0" /></StackPanel>
                         </Button>
                     </StackPanel>
                 </StackPanel>
@@ -313,6 +313,9 @@
                         <Button Content="Delete forever" Command="{Binding DeleteForeverCommand}" Padding="14,7" Margin="4,0" Background="#22FFFFFF" BorderBrush="#22000000"
                                 Foreground="#FF9D2929" Visibility="{Binding SelectedNote.IsTrashed, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
+                    <Button DockPanel.Dock="Right" Content="{Binding SelectedNote.ReminderLabel}" Click="Reminder_Click"
+                            Margin="8,0,14,0" Padding="10,5" Background="#18FFFFFF" BorderBrush="#22000000"
+                            Foreground="#BB514B45" ToolTip="Set or change reminder" />
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="COLOR" FontSize="9" FontWeight="SemiBold" Foreground="#99514B45" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <Button Width="22" Height="22" Margin="3" Background="#FFFFD453" BorderThickness="0" Command="{Binding SetColorCommand}" CommandParameter="Yellow" />
@@ -338,7 +341,7 @@
             </Grid.Style>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="300">
                 <Border Width="72" Height="72" CornerRadius="22" Background="#FFFFEAA0" HorizontalAlignment="Center">
-                    <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="#FF5F512B" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Image Source="Assets/ColorNotes.png" Margin="9" />
                 </Border>
                 <TextBlock Text="A quiet place for your thoughts" FontSize="20" FontWeight="SemiBold" Foreground="#FF514B45" TextAlignment="Center" Margin="0,20,0,0" />
                 <TextBlock Text="Create a note or checklist. Everything is saved privately on this PC." TextWrapping="Wrap" TextAlignment="Center" Foreground="#FF8B8178" Margin="0,10,0,20" />

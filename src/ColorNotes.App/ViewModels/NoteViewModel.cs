@@ -69,6 +69,7 @@ public sealed class NoteViewModel : ObservableObject
     public bool HasReminder => ReminderAt is not null;
     public string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? "Untitled note" : Title.Trim();
     public string UpdatedLabel => UpdatedAt.LocalDateTime.ToString("MMM d, h:mm tt");
+    public string ReminderLabel => ReminderAt?.LocalDateTime.ToString("ddd, MMM d · h:mm tt") ?? "Add reminder";
 
     public ChecklistItemViewModel AddChecklistItem(string text = "")
     {
@@ -102,6 +103,7 @@ public sealed class NoteViewModel : ObservableObject
         OnPropertyChanged(nameof(Preview));
         OnPropertyChanged(nameof(UpdatedAt));
         OnPropertyChanged(nameof(UpdatedLabel));
+        OnPropertyChanged(nameof(ReminderLabel));
     }
 
     public event EventHandler? Changed;
@@ -131,6 +133,7 @@ public sealed class NoteViewModel : ObservableObject
         OnPropertyChanged(nameof(Preview));
         OnPropertyChanged(nameof(IsTrashed));
         OnPropertyChanged(nameof(HasReminder));
+        OnPropertyChanged(nameof(ReminderLabel));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 }
