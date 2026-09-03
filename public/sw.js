@@ -1,4 +1,4 @@
-const CACHE = 'color-notes-v7';
+const CACHE = 'color-notes-v8';
 const ROOT = new URL('./', self.location.href).pathname;
 const asset = (name) => new URL(name, self.registration.scope).pathname;
 const SHELL = [ROOT, asset('manifest.webmanifest'), asset('icon-192.svg'), asset('icon-512.svg')];
