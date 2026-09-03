@@ -1,6 +1,8 @@
 # Color Notes Web
 
-A private, local-first notes PWA that works online and offline.
+A fast, local-first notes PWA that works online and offline.
+
+**Live website:** https://rishi-shut.github.io/color-notes/
 
 ## What is stored
 
@@ -11,6 +13,7 @@ Notes, checklists, colors, reminders, archive state, and trash are stored in Ind
 ```bash
 npm run dev
 npm run build
+npm run build:github-pages
 ```
 
 Open the site once while online to cache the application shell. After that, the service worker and IndexedDB keep the full notes experience available offline.

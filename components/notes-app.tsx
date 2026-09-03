@@ -16,6 +16,8 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Pro
 type ToolDefinition = { name: string; title?: string; description: string; inputSchema: object; annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean }; execute: (input: unknown) => unknown | Promise<unknown> };
 declare global { interface Document { modelContext?: { registerTool: (tool: ToolDefinition, options?: { signal?: AbortSignal }) => void | Promise<void> } } }
 
+const publicAsset = (name: string) => new URL(name.replace(/^\//, ''), document.baseURI).pathname;
+
 const navItems: { section: NoteSection; label: string; icon: React.ReactNode }[] = [
   { section: 'all', label: 'All notes', icon: <FileText /> }, { section: 'favorites', label: 'Favorites', icon: <Star /> },
   { section: 'reminders', label: 'Reminders', icon: <Bell /> }, { section: 'archive', label: 'Archive', icon: <Archive /> },
@@ -49,7 +51,7 @@ export function NotesApp() {
     setSort((localStorage.getItem('color-notes-sort') as NoteSort) || 'updated');
     setOnline(navigator.onLine);
     loadNotes().then(setNotes).catch(() => announce('Offline storage could not be opened.')).finally(() => setLoading(false));
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register(publicAsset('sw.js')).catch(() => undefined);
   }, [announce]);
 
   React.useEffect(() => { document.documentElement.classList.toggle('dark', dark); localStorage.setItem('color-notes-theme', dark ? 'dark' : 'light'); }, [dark]);
@@ -97,7 +99,7 @@ export function NotesApp() {
   React.useEffect(() => {
     const check = () => notesRef.current.filter((note) => note.reminderAt && new Date(note.reminderAt) <= new Date() && !note.deletedAt).forEach((note) => {
       const key = `reminded-${note.id}-${note.reminderAt}`; if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1');
-      if (Notification.permission === 'granted') new Notification(note.title || 'Color Notes reminder', { body: note.body.slice(0, 120), icon: '/icon-192.svg' });
+      if (Notification.permission === 'granted') new Notification(note.title || 'Color Notes reminder', { body: note.body.slice(0, 120), icon: publicAsset('icon-192.svg') });
       announce(`Reminder: ${note.title || 'Untitled note'}`);
     });
     check(); const interval = window.setInterval(check, 30_000); return () => window.clearInterval(interval);
