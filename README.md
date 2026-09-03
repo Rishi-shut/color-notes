@@ -2,6 +2,8 @@
 
 A fast, local-first notes PWA that works online and offline.
 
+Live website: https://color-notes-mauve.vercel.app/
+
 ## What is stored
 
 Notes, checklists, colors, reminders, archive state, and trash are stored in IndexedDB on the current device. Product data is not sent to a server. Theme and sort preferences use local storage.
