@@ -1,8 +1,7 @@
 export type NoteColor = 'butter' | 'mint' | 'lilac' | 'sky' | 'peach' | 'rose' | 'stone';
-export type NoteKind = 'text' | 'checklist' | 'drawing';
+export type NoteKind = 'text' | 'checklist' | 'notebook' | 'drawing';
 export type NoteSection = 'all' | 'favorites' | 'reminders' | 'trash';
-export type NoteSort = 'updated' | 'created' | 'title' | 'color';
-export type NoteView = 'grid' | 'notebook';
+export type NoteSort = 'updated' | 'created' | 'title';
 export type AppTheme = 'butter' | 'mint' | 'lilac' | 'sky' | 'peach' | 'rose' | 'stone' | 'midnight';
 
 export interface DrawingPoint { x: number; y: number }
