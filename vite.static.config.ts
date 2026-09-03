@@ -4,8 +4,8 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: 'github-pages',
-  base: '/color-notes/',
+  root: 'static-site',
+  base: '/',
   publicDir: '../public',
   resolve: {
     alias: { '@': fileURLToPath(new URL('.', import.meta.url)) },
@@ -13,7 +13,7 @@ export default defineConfig({
   css: { postcss: { plugins: [tailwindcss()] } },
   plugins: [react()],
   build: {
-    outDir: '../github-pages-dist',
+    outDir: '../vercel-dist',
     emptyOutDir: true,
   },
 });
