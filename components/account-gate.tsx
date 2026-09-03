@@ -23,6 +23,9 @@ export function AccountGate() {
 
   React.useEffect(() => { accountRef.current = account; }, [account]);
   React.useEffect(() => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('sw.js', document.baseURI).pathname, { updateViaCache: 'none' }).catch(() => undefined);
+  }, []);
+  React.useEffect(() => {
     const restore = async () => {
       try {
         const usernameKey = sessionStorage.getItem('color-notes-unlocked-user');
@@ -136,7 +139,7 @@ export function AccountGate() {
     window.clearTimeout(syncTimer.current); void syncNow();
     sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key');
     keyRef.current = null; accountRef.current = null; setAccount(null);
-    void fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
+    void fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => undefined);
   }, [syncNow]);
 
   React.useEffect(() => {
@@ -148,7 +151,7 @@ export function AccountGate() {
 
   if (booting) return <div className="auth-shell"><div className="auth-loading"><span className="brand-mark"><i /><i /><i /></span><p>Opening your private vault…</p></div></div>;
   if (!account) return <AuthScreen onAuthenticated={unlock} onOfflineUnlock={offlineUnlock} />;
-  return <NotesApp key={`${account.usernameKey}:${account.refresh}`} initialNotes={account.notes} username={account.username} syncStatus={syncStatus} onNotesChange={notesChanged} onDeleteForever={deletedForever} onSignOut={signOut} />;
+  return <NotesApp initialNotes={account.notes} username={account.username} syncStatus={syncStatus} onNotesChange={notesChanged} onDeleteForever={deletedForever} onSignOut={signOut} />;
 }
 
 function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (reply: AuthReply, password: string, isNew: boolean) => Promise<void>; onOfflineUnlock: (username: string, password: string) => Promise<void> }) {
