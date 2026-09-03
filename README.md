@@ -1,12 +1,14 @@
 # Color Notes Web
 
-A fast, local-first notes PWA that works online and offline.
+A fast, encrypted notes PWA that works online, offline, and across devices.
 
 Live website: https://color-notes-mauve.vercel.app/
 
-## What is stored
+## Accounts and privacy
 
-Notes, checklists, colors, reminders, archive state, and trash are stored in IndexedDB on the current device. Product data is not sent to a server. Theme and sort preferences use local storage.
+Accounts use a unique username and password—no email address is required. The password never leaves the device and cannot be reset. It derives the key that encrypts notes before they sync, so a forgotten password means the encrypted notes cannot be recovered.
+
+An encrypted copy of the vault is cached in IndexedDB for offline access. After an account has been opened once on a device, it can be unlocked there without a connection; pending changes sync automatically after reconnection. Theme and sort preferences use local storage.
 
 ## Development
 
@@ -16,4 +18,4 @@ npm run build
 npm run build:static
 ```
 
-Open the site once while online to cache the application shell. After that, the service worker and IndexedDB keep the full notes experience available offline.
+Open the site once while online to cache the complete application shell. After that, the service worker and encrypted local vault keep the notes experience available offline.
