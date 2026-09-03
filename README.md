@@ -15,7 +15,7 @@ An encrypted copy of the vault is cached in IndexedDB for offline access. After 
 - Text notes, ruled notebook notes, checklists, and extendable freehand drawings with pen colors, a distinct eraser, Move/Scroll mode, brush sizes, undo, and clear
 - Eight complete, contrast-checked themes that recolor the app and every note with a top-left wave transition
 - Multi-select actions for copy, duplicate, favorite, trash, restore, and permanent deletion
-- Search, sorting, pinning, reminders, trash, import, and export
+- Automatic safe web links, compact front-page previews, search, sorting, pinning, reminders, trash, import, and export
 
 Archive is intentionally removed. Notes from older versions that were archived are returned safely to All Notes.
 
