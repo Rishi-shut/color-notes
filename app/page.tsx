@@ -1,5 +1,5 @@
-import { NotesApp } from '@/components/notes-app';
+import { AccountGate } from '@/components/account-gate';
 
 export default function Home() {
-  return <NotesApp />;
+  return <AccountGate />;
 }
