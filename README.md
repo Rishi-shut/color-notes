@@ -12,11 +12,10 @@ An encrypted copy of the vault is cached in IndexedDB for offline access. After 
 
 ## Note tools
 
-- Text notes, checklists, and editable freehand drawings with pen colors, brush sizes, eraser, undo, and clear
-- Grid and ruled-notebook layouts
-- Eight complete, contrast-checked website color themes
+- Text notes, ruled notebook notes, checklists, and editable freehand drawings with pen colors, brush sizes, eraser, undo, and clear
+- Eight complete, contrast-checked themes that recolor the app and every note with a top-left wave transition
 - Multi-select actions for copy, duplicate, favorite, trash, restore, and permanent deletion
-- Search, sorting, note colors, pinning, reminders, trash, import, and export
+- Search, sorting, pinning, reminders, trash, import, and export
 
 Archive is intentionally removed. Notes from older versions that were archived are returned safely to All Notes.
 
