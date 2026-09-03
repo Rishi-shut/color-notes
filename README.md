@@ -10,6 +10,16 @@ Accounts use a unique username and password—no email address is required. The 
 
 An encrypted copy of the vault is cached in IndexedDB for offline access. After an account has been opened once on a device, it can be unlocked there without a connection; pending changes sync automatically after reconnection. Theme and sort preferences use local storage.
 
+## Note tools
+
+- Text notes, checklists, and editable freehand drawings with pen colors, brush sizes, eraser, undo, and clear
+- Grid and ruled-notebook layouts
+- Eight complete, contrast-checked website color themes
+- Multi-select actions for copy, duplicate, favorite, trash, restore, and permanent deletion
+- Search, sorting, note colors, pinning, reminders, trash, import, and export
+
+Archive is intentionally removed. Notes from older versions that were archived are returned safely to All Notes.
+
 ## Development
 
 ```bash
