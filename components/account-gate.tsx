@@ -23,6 +23,7 @@ export function AccountGate() {
 
   React.useEffect(() => { accountRef.current = account; }, [account]);
   React.useEffect(() => {
+    document.documentElement.dataset.theme = localStorage.getItem('color-notes-app-theme') || 'butter';
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('sw.js', document.baseURI).pathname, { updateViaCache: 'none' }).catch(() => undefined);
   }, []);
   React.useEffect(() => {
