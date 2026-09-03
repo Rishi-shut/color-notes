@@ -52,9 +52,10 @@ export function normalizeUsername(value: unknown) {
   if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) return null;
   return { username, key: username.toLowerCase() };
 }
-export function validPassword(value: unknown): value is string { return typeof value === 'string' && value.length >= 8 && value.length <= 128; }
+export function validVerifier(value: unknown): value is string { return typeof value === 'string' && /^[A-Za-z0-9+/]{43}=$/.test(value); }
+export function validEncryptionSalt(value: unknown): value is string { return typeof value === 'string' && /^[A-Za-z0-9+/]{24}$/.test(value); }
 export function makeSalt() { return randomBytes(18).toString('base64url'); }
-export function hashPassword(password: string, salt: string) { return scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }).toString('base64url'); }
+export function hashVerifier(verifier: string, salt: string) { return scryptSync(verifier, salt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }).toString('base64url'); }
 export function safeEqual(a: string, b: string) { const left = Buffer.from(a); const right = Buffer.from(b); return left.length === right.length && timingSafeEqual(left, right); }
 function tokenHash(token: string) { return createHash('sha256').update(token).digest('base64url'); }
 

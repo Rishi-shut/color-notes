@@ -7,10 +7,18 @@ export type LocalVault = EncryptedVault & { username: string; usernameKey: strin
 const bytesToBase64 = (bytes: Uint8Array) => { let value = ''; for (const byte of bytes) value += String.fromCharCode(byte); return btoa(value); };
 const base64ToBytes = (value: string) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
-export async function deriveVaultKey(password: string, salt: string) {
+export function createEncryptionSalt() { return bytesToBase64(crypto.getRandomValues(new Uint8Array(18))); }
+export async function deriveVaultCredentials(password: string, salt: string) {
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: base64ToBytes(salt), iterations: 310_000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: base64ToBytes(salt), iterations: 310_000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+  const label = new TextEncoder().encode('color-notes-auth-v1');
+  const verifierInput = new Uint8Array(raw.length + label.length);
+  verifierInput.set(raw); verifierInput.set(label, raw.length);
+  const verifier = bytesToBase64(new Uint8Array(await crypto.subtle.digest('SHA-256', verifierInput)));
+  return { key, verifier };
 }
+export async function deriveVaultKey(password: string, salt: string) { return (await deriveVaultCredentials(password, salt)).key; }
 export async function exportVaultKey(key: CryptoKey) { return bytesToBase64(new Uint8Array(await crypto.subtle.exportKey('raw', key))); }
 export async function importVaultKey(value: string) { return crypto.subtle.importKey('raw', base64ToBytes(value), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']); }
 export async function encryptVault(payload: VaultPayload, key: CryptoKey, revision: number): Promise<EncryptedVault> {

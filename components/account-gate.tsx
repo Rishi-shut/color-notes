@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NotesApp, type SyncStatus } from '@/components/notes-app';
 import { loadNotes, replaceAllNotes } from '@/lib/notes-db';
-import { decryptVault, deriveVaultKey, encryptVault, exportVaultKey, importVaultKey, loadLocalVault, mergeVaults, saveLocalVault, type EncryptedVault, type VaultPayload } from '@/lib/secure-vault';
+import { createEncryptionSalt, decryptVault, deriveVaultCredentials, deriveVaultKey, encryptVault, exportVaultKey, importVaultKey, loadLocalVault, mergeVaults, saveLocalVault, type EncryptedVault, type VaultPayload } from '@/lib/secure-vault';
 
 type Account = { username: string; usernameKey: string; encryptionSalt: string; notes: VaultPayload['notes']; refresh: number };
 type AuthReply = { username: string; usernameKey: string; encryptionSalt: string; error?: string };
@@ -165,7 +165,16 @@ function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (re
     setBusy(true);
     try {
       if (!navigator.onLine) { if (mode === 'signup') throw new Error('Connect once to create an account.'); await onOfflineUnlock(username, password); return; }
-      const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: mode, username, password }) });
+      let encryptionSalt: string;
+      if (mode === 'signup') encryptionSalt = createEncryptionSalt();
+      else {
+        const challengeResponse = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'challenge', username }) });
+        const challenge = await challengeResponse.json() as { encryptionSalt?: string; error?: string };
+        if (!challengeResponse.ok || !challenge.encryptionSalt) throw new Error(challenge.error || 'Username or password is incorrect.');
+        encryptionSalt = challenge.encryptionSalt;
+      }
+      const credentials = await deriveVaultCredentials(password, encryptionSalt);
+      const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: mode, username, verifier: credentials.verifier, encryptionSalt: mode === 'signup' ? encryptionSalt : undefined }) });
       const data = await response.json() as AuthReply;
       if (!response.ok) throw new Error(data.error || 'Could not sign in.');
       await onAuthenticated(data, password, mode === 'signup');
