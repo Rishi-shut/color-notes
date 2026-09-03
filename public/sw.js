@@ -1,10 +1,22 @@
-const CACHE = 'color-notes-v2';
+const CACHE = 'color-notes-v3';
 const ROOT = new URL('./', self.location.href).pathname;
 const asset = (name) => new URL(name, self.registration.scope).pathname;
 const SHELL = [ROOT, asset('manifest.webmanifest'), asset('icon-192.svg'), asset('icon-512.svg')];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const page = await fetch(ROOT, { cache: 'reload' });
+    if (!page.ok) throw new Error('Could not cache the app shell.');
+    await cache.put(ROOT, page.clone());
+    const html = await page.text();
+    const discovered = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
+      .map((match) => new URL(match[1], self.registration.scope))
+      .filter((url) => url.origin === self.location.origin)
+      .map((url) => url.pathname);
+    await cache.addAll([...new Set([...SHELL.slice(1), ...discovered])]);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -17,5 +29,5 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(event.request).then((response) => { const copy = response.clone(); caches.open(CACHE).then((cache) => cache.put(ROOT, copy)); return response; }).catch(() => caches.match(ROOT)));
     return;
   }
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => { if (response.ok) { const copy = response.clone(); caches.open(CACHE).then((cache) => cache.put(event.request, copy)); } return response; })));
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => { if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, copy))); } return response; })));
 });
