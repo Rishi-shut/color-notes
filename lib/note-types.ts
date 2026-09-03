@@ -26,6 +26,7 @@ export interface Note {
   deletedAt: string | null;
   reminderAt: string | null;
   drawing: DrawingStroke[];
+  drawingHeight: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +50,7 @@ export function createNote(kind: NoteKind = 'text', color: NoteColor = 'butter')
     body: '',
     checklist: kind === 'checklist' ? [{ id: crypto.randomUUID(), text: '', done: false }] : [],
     drawing: [],
+    drawingHeight: 700,
     color,
     pinned: false,
     favorite: false,
