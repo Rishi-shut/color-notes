@@ -94,7 +94,7 @@ function starterNotes(): Note[] {
   return [
     {
       id: crypto.randomUUID(), kind: 'text', title: 'Welcome to your quiet corner',
-      body: 'This space belongs to you. Everything saves automatically on this device and keeps working without the internet.', checklist: [], color: 'butter',
+      body: 'This space belongs to you. Everything saves automatically on this device and keeps working without the internet.', checklist: [], drawing: [], color: 'butter',
       pinned: true, favorite: true, archived: false, deletedAt: null, reminderAt: null,
       createdAt: new Date(now - 120_000).toISOString(), updatedAt: new Date(now - 60_000).toISOString(),
     },
@@ -104,12 +104,12 @@ function starterNotes(): Note[] {
         { id: crypto.randomUUID(), text: 'Create a colorful note', done: false },
         { id: crypto.randomUUID(), text: 'Pin something important', done: false },
         { id: crypto.randomUUID(), text: 'Install Color Notes', done: false },
-      ],
+      ], drawing: [],
       createdAt: new Date(now - 90_000).toISOString(), updatedAt: new Date(now - 30_000).toISOString(),
     },
     {
       id: crypto.randomUUID(), kind: 'text', title: 'A thought for later',
-      body: 'Small notes compound into a life remembered.', checklist: [], color: 'lilac', pinned: false, favorite: false, archived: false, deletedAt: null, reminderAt: null,
+      body: 'Small notes compound into a life remembered.', checklist: [], drawing: [], color: 'lilac', pinned: false, favorite: false, archived: false, deletedAt: null, reminderAt: null,
       createdAt: new Date(now - 60_000).toISOString(), updatedAt: new Date(now - 20_000).toISOString(),
     },
   ];
