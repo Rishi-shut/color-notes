@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NotesApp, type SyncStatus } from '@/components/notes-app';
 import { loadNotes, replaceAllNotes } from '@/lib/notes-db';
-import { createEncryptionSalt, decryptVault, deriveVaultCredentials, deriveVaultKey, encryptVault, exportVaultKey, importVaultKey, loadLocalVault, mergeVaults, saveLocalVault, type EncryptedVault, type VaultPayload } from '@/lib/secure-vault';
+import { createEncryptionSalt, decryptVault, deriveVaultCredentials, encryptVault, forgetVaultSession, importVaultKey, loadLocalVault, loadRememberedVaultSession, mergeVaults, rememberVaultSession, saveLocalVault, type EncryptedVault, type VaultPayload } from '@/lib/secure-vault';
 
 type Account = { username: string; usernameKey: string; encryptionSalt: string; notes: VaultPayload['notes']; refresh: number };
 type AuthReply = { username: string; usernameKey: string; encryptionSalt: string; error?: string };
@@ -16,38 +16,57 @@ export function AccountGate() {
   const [booting, setBooting] = React.useState(true);
   const [syncStatus, setSyncStatus] = React.useState<SyncStatus>(() => typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'saved');
   const keyRef = React.useRef<CryptoKey | null>(null);
+  const verifierRef = React.useRef<string | null>(null);
   const payloadRef = React.useRef<VaultPayload>({ version: 1, notes: [], tombstones: {} });
   const accountRef = React.useRef<Account | null>(null);
   const revisionRef = React.useRef(0);
   const syncTimer = React.useRef<number | undefined>(undefined);
 
   React.useEffect(() => { accountRef.current = account; }, [account]);
+  const fetchWithSession = React.useCallback(async (input: RequestInfo | URL, init?: RequestInit) => {
+    let response = await fetch(input, init);
+    const current = accountRef.current;
+    const verifier = verifierRef.current;
+    if (response.status !== 401 || !current || !verifier || !navigator.onLine) return response;
+    const login = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', username: current.username, verifier }) });
+    if (login.ok) response = await fetch(input, init);
+    return response;
+  }, []);
   React.useEffect(() => {
     document.documentElement.dataset.theme = localStorage.getItem('color-notes-app-theme') || 'butter';
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('sw.js', document.baseURI).pathname, { updateViaCache: 'none' }).catch(() => undefined);
   }, []);
-  React.useEffect(() => {
-    const restore = async () => {
-      try {
-        const usernameKey = sessionStorage.getItem('color-notes-unlocked-user');
-        const rawKey = sessionStorage.getItem('color-notes-unlocked-key');
-        if (!usernameKey || !rawKey) return;
-        const local = await loadLocalVault(usernameKey);
-        if (!local) return;
-        const key = await importVaultKey(rawKey);
-        const payload = await decryptVault(local, key);
-        keyRef.current = key; payloadRef.current = payload; revisionRef.current = local.revision;
-        const restored = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, refresh: 0 };
-        accountRef.current = restored; setAccount(restored);
-        if (navigator.onLine) void refreshFromCloud(key, local.username, usernameKey, local.encryptionSalt, payload, local.revision);
-      } catch { sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key'); }
-    };
-    void restore().finally(() => setBooting(false));
-  }, []);
-
-  const refreshFromCloud = async (key: CryptoKey, username: string, usernameKey: string, encryptionSalt: string, localPayload: VaultPayload, localRevision: number) => {
+  const syncNow = React.useCallback(async () => {
+    const current = accountRef.current;
+    const key = keyRef.current;
+    if (!current || !key) return;
+    const encrypted = await encryptVault(payloadRef.current, key, revisionRef.current);
+    await saveLocalVault({ ...encrypted, username: current.username, usernameKey: current.usernameKey, encryptionSalt: current.encryptionSalt });
+    if (!navigator.onLine) { setSyncStatus('offline'); return; }
+    setSyncStatus('saving');
     try {
-      const response = await fetch('/api/vault');
+      let response = await fetchWithSession('/api/vault', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ciphertext: encrypted.ciphertext, iv: encrypted.iv, baseRevision: revisionRef.current }) });
+      if (response.status === 409) {
+        const conflict = await response.json() as { vault: EncryptedVault & { revision: number | string } };
+        const remote = { ...conflict.vault, revision: Number(conflict.vault.revision) };
+        const merged = mergeVaults(payloadRef.current, await decryptVault(remote, key));
+        payloadRef.current = merged; revisionRef.current = remote.revision;
+        const retry = await encryptVault(merged, key, remote.revision);
+        response = await fetchWithSession('/api/vault', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ciphertext: retry.ciphertext, iv: retry.iv, baseRevision: remote.revision }) });
+        if (response.ok) setAccount((value) => value ? { ...value, notes: merged.notes, refresh: value.refresh + 1 } : value);
+      }
+      if (!response.ok) throw new Error();
+      const saved = await response.json() as { revision: number };
+      revisionRef.current = Number(saved.revision);
+      const cached = await encryptVault(payloadRef.current, key, revisionRef.current);
+      await saveLocalVault({ ...cached, username: current.username, usernameKey: current.usernameKey, encryptionSalt: current.encryptionSalt });
+      setSyncStatus('saved');
+    } catch { setSyncStatus(navigator.onLine ? 'error' : 'offline'); }
+  }, [fetchWithSession]);
+
+  const refreshFromCloud = React.useCallback(async (key: CryptoKey, username: string, usernameKey: string, encryptionSalt: string, localPayload: VaultPayload) => {
+    try {
+      const response = await fetchWithSession('/api/vault');
       if (!response.ok) return;
       const data = await response.json() as { vault: ({ ciphertext: string; iv: string; revision: number | string } | null) };
       const remote = data.vault;
@@ -61,35 +80,36 @@ export function AccountGate() {
       setAccount((current) => current ? { ...current, notes: merged.notes, refresh: current.refresh + 1 } : current);
       if (JSON.stringify(merged) !== JSON.stringify(remotePayload)) await syncNow(); else setSyncStatus('saved');
     } catch { setSyncStatus(navigator.onLine ? 'error' : 'offline'); }
-  };
+  }, [fetchWithSession, syncNow]);
 
-  const syncNow = React.useCallback(async () => {
-    const current = accountRef.current;
-    const key = keyRef.current;
-    if (!current || !key) return;
-    const encrypted = await encryptVault(payloadRef.current, key, revisionRef.current);
-    await saveLocalVault({ ...encrypted, username: current.username, usernameKey: current.usernameKey, encryptionSalt: current.encryptionSalt });
-    if (!navigator.onLine) { setSyncStatus('offline'); return; }
-    setSyncStatus('saving');
-    try {
-      let response = await fetch('/api/vault', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ciphertext: encrypted.ciphertext, iv: encrypted.iv, baseRevision: revisionRef.current }) });
-      if (response.status === 409) {
-        const conflict = await response.json() as { vault: EncryptedVault & { revision: number | string } };
-        const remote = { ...conflict.vault, revision: Number(conflict.vault.revision) };
-        const merged = mergeVaults(payloadRef.current, await decryptVault(remote, key));
-        payloadRef.current = merged; revisionRef.current = remote.revision;
-        const retry = await encryptVault(merged, key, remote.revision);
-        response = await fetch('/api/vault', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ciphertext: retry.ciphertext, iv: retry.iv, baseRevision: remote.revision }) });
-        if (response.ok) setAccount((value) => value ? { ...value, notes: merged.notes, refresh: value.refresh + 1 } : value);
+  React.useEffect(() => {
+    const restore = async () => {
+      try {
+        const usernameKey = localStorage.getItem('color-notes-unlocked-user') ?? sessionStorage.getItem('color-notes-unlocked-user');
+        if (!usernameKey) return;
+        const local = await loadLocalVault(usernameKey);
+        if (!local) return;
+        const remembered = await loadRememberedVaultSession(usernameKey);
+        const legacyKey = sessionStorage.getItem('color-notes-unlocked-key');
+        if (!remembered && !legacyKey) return;
+        const key = remembered?.key ?? await importVaultKey(legacyKey!);
+        const payload = await decryptVault(local, key);
+        keyRef.current = key; verifierRef.current = remembered?.verifier ?? null; payloadRef.current = payload; revisionRef.current = local.revision;
+        localStorage.setItem('color-notes-unlocked-user', usernameKey);
+        if (!remembered) await rememberVaultSession(usernameKey, key, null);
+        sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key');
+        const restored = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, refresh: 0 };
+        accountRef.current = restored; setAccount(restored);
+        if (navigator.onLine) void refreshFromCloud(key, local.username, usernameKey, local.encryptionSalt, payload);
+      } catch {
+        const usernameKey = localStorage.getItem('color-notes-unlocked-user');
+        if (usernameKey) void forgetVaultSession(usernameKey);
+        localStorage.removeItem('color-notes-unlocked-user');
+        sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key');
       }
-      if (!response.ok) throw new Error();
-      const saved = await response.json() as { revision: number };
-      revisionRef.current = Number(saved.revision);
-      const cached = await encryptVault(payloadRef.current, key, revisionRef.current);
-      await saveLocalVault({ ...cached, username: current.username, usernameKey: current.usernameKey, encryptionSalt: current.encryptionSalt });
-      setSyncStatus('saved');
-    } catch { setSyncStatus(navigator.onLine ? 'error' : 'offline'); }
-  }, []);
+    };
+    void restore().finally(() => setBooting(false));
+  }, [refreshFromCloud]);
 
   const notesChanged = React.useCallback((notes: VaultPayload['notes']) => {
     payloadRef.current = { ...payloadRef.current, notes };
@@ -99,13 +119,13 @@ export function AccountGate() {
   }, [syncNow]);
   const deletedForever = React.useCallback((id: string) => { payloadRef.current.tombstones[id] = new Date().toISOString(); }, []);
 
-  const unlock = async (reply: AuthReply, password: string, isNew: boolean) => {
-    const key = await deriveVaultKey(password, reply.encryptionSalt);
+  const unlock = async (reply: AuthReply, credentials: Awaited<ReturnType<typeof deriveVaultCredentials>>, isNew: boolean) => {
+    const key = credentials.key;
     let payload: VaultPayload = { version: 1, notes: [], tombstones: {} };
     let revision = 0;
     if (isNew) { payload.notes = await loadNotes(); await replaceAllNotes([]); }
     else {
-      const response = await fetch('/api/vault');
+      const response = await fetchWithSession('/api/vault');
       const data = response.ok ? await response.json() as { vault: EncryptedVault | null } : { vault: null };
       const local = await loadLocalVault(reply.usernameKey);
       const localPayload = local ? await decryptVault(local, key) : null;
@@ -113,10 +133,10 @@ export function AccountGate() {
       payload = localPayload && remotePayload ? mergeVaults(localPayload, remotePayload) : localPayload ?? remotePayload ?? payload;
       revision = data.vault ? Number(data.vault.revision) : 0;
     }
-    keyRef.current = key; payloadRef.current = payload; revisionRef.current = revision;
-    sessionStorage.setItem('color-notes-unlocked-user', reply.usernameKey);
-    sessionStorage.setItem('color-notes-unlocked-key', await exportVaultKey(key));
+    keyRef.current = key; verifierRef.current = credentials.verifier; payloadRef.current = payload; revisionRef.current = revision;
+    localStorage.setItem('color-notes-unlocked-user', reply.usernameKey);
     localStorage.setItem('color-notes-last-user', reply.username);
+    await rememberVaultSession(reply.usernameKey, key, credentials.verifier);
     const encrypted = await encryptVault(payload, key, revision);
     await saveLocalVault({ ...encrypted, username: reply.username, usernameKey: reply.usernameKey, encryptionSalt: reply.encryptionSalt });
     const next = { username: reply.username, usernameKey: reply.usernameKey, encryptionSalt: reply.encryptionSalt, notes: payload.notes, refresh: 0 };
@@ -127,20 +147,25 @@ export function AccountGate() {
     const usernameKey = username.trim().toLowerCase();
     const local = await loadLocalVault(usernameKey);
     if (!local) throw new Error('This account has not been unlocked on this device yet. Connect once to sign in.');
-    const key = await deriveVaultKey(password, local.encryptionSalt);
+    const credentials = await deriveVaultCredentials(password, local.encryptionSalt);
+    const key = credentials.key;
     let payload: VaultPayload;
     try { payload = await decryptVault(local, key); } catch { throw new Error('Username or password is incorrect.'); }
-    keyRef.current = key; payloadRef.current = payload; revisionRef.current = local.revision;
-    sessionStorage.setItem('color-notes-unlocked-user', usernameKey); sessionStorage.setItem('color-notes-unlocked-key', await exportVaultKey(key));
+    keyRef.current = key; verifierRef.current = credentials.verifier; payloadRef.current = payload; revisionRef.current = local.revision;
+    localStorage.setItem('color-notes-unlocked-user', usernameKey);
+    await rememberVaultSession(usernameKey, key, credentials.verifier);
     const next = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, refresh: 0 };
     accountRef.current = next; setAccount(next); setSyncStatus('offline');
   };
 
   const signOut = React.useCallback(() => {
-    window.clearTimeout(syncTimer.current); void syncNow();
+    window.clearTimeout(syncTimer.current);
+    const usernameKey = accountRef.current?.usernameKey;
+    void syncNow().finally(() => fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => undefined));
+    if (usernameKey) void forgetVaultSession(usernameKey);
+    localStorage.removeItem('color-notes-unlocked-user');
     sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key');
-    keyRef.current = null; accountRef.current = null; setAccount(null);
-    void fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => undefined);
+    keyRef.current = null; verifierRef.current = null; accountRef.current = null; setAccount(null);
   }, [syncNow]);
 
   React.useEffect(() => {
@@ -155,7 +180,7 @@ export function AccountGate() {
   return <NotesApp initialNotes={account.notes} username={account.username} syncStatus={syncStatus} onNotesChange={notesChanged} onDeleteForever={deletedForever} onSignOut={signOut} />;
 }
 
-function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (reply: AuthReply, password: string, isNew: boolean) => Promise<void>; onOfflineUnlock: (username: string, password: string) => Promise<void> }) {
+function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (reply: AuthReply, credentials: Awaited<ReturnType<typeof deriveVaultCredentials>>, isNew: boolean) => Promise<void>; onOfflineUnlock: (username: string, password: string) => Promise<void> }) {
   const [mode, setMode] = React.useState<'login' | 'signup'>('login');
   const [username, setUsername] = React.useState(() => localStorage.getItem('color-notes-last-user') ?? '');
   const [password, setPassword] = React.useState('');
@@ -163,7 +188,7 @@ function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (re
   const [show, setShow] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('');
     if (mode === 'signup' && password !== confirm) return setError('The passwords do not match.');
     setBusy(true);
@@ -181,7 +206,7 @@ function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (re
       const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: mode, username, verifier: credentials.verifier, encryptionSalt: mode === 'signup' ? encryptionSalt : undefined }) });
       const data = await response.json() as AuthReply;
       if (!response.ok) throw new Error(data.error || 'Could not sign in.');
-      await onAuthenticated(data, password, mode === 'signup');
+      await onAuthenticated(data, credentials, mode === 'signup');
     } catch (reason) {
       if (mode === 'login') {
         try { await onOfflineUnlock(username, password); return; } catch { /* show the original online error */ }
@@ -191,5 +216,5 @@ function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (re
     finally { setBusy(false); }
   };
   const offline = typeof navigator !== 'undefined' && !navigator.onLine;
-  return <main className="auth-shell"><section className="auth-card"><div className="auth-brand"><span className="brand-mark"><i /><i /><i /></span><div><strong>Color Notes</strong><small>Your quiet corner, everywhere.</small></div></div><div className="auth-copy"><span className="auth-icon"><LockKeyhole /></span><p className="auth-kicker">PRIVATE BY DESIGN</p><h1>{mode === 'login' ? 'Open your notes' : 'Create your private vault'}</h1><p>Your notes are encrypted on this device before they sync. Use the same username and password on any device.</p></div><div className="auth-tabs"><button className={mode === 'login' ? 'is-active' : ''} onClick={() => { setMode('login'); setError(''); }}>Sign in</button><button className={mode === 'signup' ? 'is-active' : ''} onClick={() => { setMode('signup'); setError(''); }}>Create account</button></div><form onSubmit={submit}><label>Username<Input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="3–24 letters, numbers, or _" required /></label><label>Password<div className="password-field"><Input type={show ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} maxLength={128} placeholder="At least 8 characters" required /><button type="button" onClick={() => setShow((value) => !value)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff /> : <Eye />}</button></div></label>{mode === 'signup' && <label>Confirm password<Input type={show ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} minLength={8} required /></label>}{mode === 'signup' && <div className="password-warning"><AlertTriangle /><p><strong>There is no password reset.</strong> If you forget your password, nobody—not even us—can recover your notes. Save it somewhere safe.</p></div>}{error && <p className="auth-error" role="alert">{error}</p>}<Button type="submit" size="lg" disabled={busy}>{busy ? 'Opening vault…' : mode === 'login' ? 'Open my notes' : 'Create my vault'}</Button></form><div className="auth-trust"><ShieldCheck /><span><strong>Zero-knowledge notes</strong><small>The server stores only encrypted text.</small></span></div>{offline && <div className="offline-auth"><CloudOff />You are offline. Sign in to an account previously opened on this device.</div>}</section></main>;
+  return <main className="auth-shell"><section className="auth-card"><div className="auth-brand"><span className="brand-mark"><i /><i /><i /></span><div><strong>Color Notes</strong><small>Your quiet corner, everywhere.</small></div></div><div className="auth-copy"><span className="auth-icon"><LockKeyhole /></span><p className="auth-kicker">PRIVATE BY DESIGN</p><h1>{mode === 'login' ? 'Open your notes' : 'Create your private vault'}</h1><p>Your notes are encrypted on this device before they sync. Use the same username and password on any device.</p></div><div className="auth-tabs"><button className={mode === 'login' ? 'is-active' : ''} onClick={() => { setMode('login'); setError(''); }}>Sign in</button><button className={mode === 'signup' ? 'is-active' : ''} onClick={() => { setMode('signup'); setError(''); }}>Create account</button></div><form onSubmit={submit}><label htmlFor="auth-username">Username<Input id="auth-username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="3–24 letters, numbers, or _" required /></label><label htmlFor="auth-password">Password<div className="password-field"><Input id="auth-password" type={show ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} maxLength={128} placeholder="At least 8 characters" required /><button type="button" onClick={() => setShow((value) => !value)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff /> : <Eye />}</button></div></label>{mode === 'signup' && <label htmlFor="auth-confirm">Confirm password<Input id="auth-confirm" type={show ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} minLength={8} required /></label>}{mode === 'signup' && <div className="password-warning"><AlertTriangle /><p><strong>There is no password reset.</strong> If you forget your password, nobody—not even us—can recover your notes. Save it somewhere safe.</p></div>}{error && <p className="auth-error" role="alert">{error}</p>}<Button type="submit" size="lg" disabled={busy}>{busy ? 'Opening vault…' : mode === 'login' ? 'Open my notes' : 'Create my vault'}</Button></form><div className="auth-trust"><ShieldCheck /><span><strong>Stay signed in on this device</strong><small>Your password is never stored. Sign out whenever you want to lock it.</small></span></div>{offline && <div className="offline-auth"><CloudOff />You are offline. Sign in to an account previously opened on this device.</div>}</section></main>;
 }
