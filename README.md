@@ -8,7 +8,7 @@ Live website: https://color-notes-mauve.vercel.app/
 
 Accounts use a unique username and password—no email address is required. The password never leaves the device and cannot be reset. It derives the key that encrypts notes before they sync, so a forgotten password means the encrypted notes cannot be recovered.
 
-An encrypted copy of the vault is cached in IndexedDB for offline access. After an account has been opened once on a device, it can be unlocked there without a connection; pending changes sync automatically after reconnection. Theme and sort preferences use local storage.
+An encrypted copy of the vault is cached in IndexedDB for offline access. After a successful sign-in, a non-extractable device key protects the remembered unlock and authentication verifier in IndexedDB—never the password itself. The app therefore stays unlocked across reloads, browser restarts, and online/offline changes, renews an expired server session automatically, and syncs pending changes after reconnection. Choosing **Sign out** removes the remembered unlock from that device. Theme and sort preferences use local storage.
 
 ## Note tools
 
