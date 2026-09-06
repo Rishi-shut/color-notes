@@ -8,7 +8,7 @@ import { NotesApp, type SyncStatus } from '@/components/notes-app';
 import { loadNotes, replaceAllNotes } from '@/lib/notes-db';
 import { createEncryptionSalt, decryptVault, deriveVaultCredentials, encryptVault, forgetVaultSession, importVaultKey, loadLocalVault, loadRememberedVaultSession, mergeVaults, rememberVaultSession, saveLocalVault, type EncryptedVault, type VaultPayload } from '@/lib/secure-vault';
 
-type Account = { username: string; usernameKey: string; encryptionSalt: string; notes: VaultPayload['notes']; refresh: number };
+type Account = { username: string; usernameKey: string; encryptionSalt: string; notes: VaultPayload['notes']; tombstones: VaultPayload['tombstones']; refresh: number };
 type AuthReply = { username: string; usernameKey: string; encryptionSalt: string; error?: string };
 
 export function AccountGate() {
@@ -53,7 +53,7 @@ export function AccountGate() {
         payloadRef.current = merged; revisionRef.current = remote.revision;
         const retry = await encryptVault(merged, key, remote.revision);
         response = await fetchWithSession('/api/vault', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ciphertext: retry.ciphertext, iv: retry.iv, baseRevision: remote.revision }) });
-        if (response.ok) setAccount((value) => value ? { ...value, notes: merged.notes, refresh: value.refresh + 1 } : value);
+        if (response.ok) setAccount((value) => value ? { ...value, notes: merged.notes, tombstones: merged.tombstones, refresh: value.refresh + 1 } : value);
       }
       if (!response.ok) throw new Error();
       const saved = await response.json() as { revision: number };
@@ -64,21 +64,27 @@ export function AccountGate() {
     } catch { setSyncStatus(navigator.onLine ? 'error' : 'offline'); }
   }, [fetchWithSession]);
 
-  const refreshFromCloud = React.useCallback(async (key: CryptoKey, username: string, usernameKey: string, encryptionSalt: string, localPayload: VaultPayload) => {
+  const pullFromCloud = React.useCallback(async (forceMerge = false) => {
+    const current = accountRef.current;
+    const key = keyRef.current;
+    if (!current || !key || !navigator.onLine) return;
     try {
-      const response = await fetchWithSession('/api/vault');
-      if (!response.ok) return;
+      const response = await fetchWithSession('/api/vault', { cache: 'no-store', headers: forceMerge ? undefined : { 'If-None-Match': `"${revisionRef.current}"` } });
+      if (response.status === 304) { setSyncStatus('saved'); return; }
+      if (!response.ok) throw new Error();
       const data = await response.json() as { vault: ({ ciphertext: string; iv: string; revision: number | string } | null) };
       const remote = data.vault;
-      if (!remote) { payloadRef.current = localPayload; revisionRef.current = 0; await syncNow(); return; }
+      if (!remote) { revisionRef.current = 0; await syncNow(); return; }
       const remoteVault = { ciphertext: remote.ciphertext, iv: remote.iv, revision: Number(remote.revision) };
+      if (!forceMerge && remoteVault.revision <= revisionRef.current) { setSyncStatus('saved'); return; }
       const remotePayload = await decryptVault(remoteVault, key);
-      const merged = mergeVaults(localPayload, remotePayload);
+      const merged = mergeVaults(payloadRef.current, remotePayload);
+      const needsPush = JSON.stringify(merged) !== JSON.stringify(remotePayload);
       payloadRef.current = merged; revisionRef.current = remoteVault.revision;
       const encrypted = await encryptVault(merged, key, remoteVault.revision);
-      await saveLocalVault({ ...encrypted, username, usernameKey, encryptionSalt });
-      setAccount((current) => current ? { ...current, notes: merged.notes, refresh: current.refresh + 1 } : current);
-      if (JSON.stringify(merged) !== JSON.stringify(remotePayload)) await syncNow(); else setSyncStatus('saved');
+      await saveLocalVault({ ...encrypted, username: current.username, usernameKey: current.usernameKey, encryptionSalt: current.encryptionSalt });
+      setAccount((value) => value ? { ...value, notes: merged.notes, tombstones: merged.tombstones, refresh: value.refresh + 1 } : value);
+      if (needsPush) await syncNow(); else setSyncStatus('saved');
     } catch { setSyncStatus(navigator.onLine ? 'error' : 'offline'); }
   }, [fetchWithSession, syncNow]);
 
@@ -98,9 +104,9 @@ export function AccountGate() {
         localStorage.setItem('color-notes-unlocked-user', usernameKey);
         if (!remembered) await rememberVaultSession(usernameKey, key, null);
         sessionStorage.removeItem('color-notes-unlocked-user'); sessionStorage.removeItem('color-notes-unlocked-key');
-        const restored = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, refresh: 0 };
+        const restored = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, tombstones: payload.tombstones, refresh: 0 };
         accountRef.current = restored; setAccount(restored);
-        if (navigator.onLine) void refreshFromCloud(key, local.username, usernameKey, local.encryptionSalt, payload);
+        if (navigator.onLine) void pullFromCloud(true);
       } catch {
         const usernameKey = localStorage.getItem('color-notes-unlocked-user');
         if (usernameKey) void forgetVaultSession(usernameKey);
@@ -109,7 +115,7 @@ export function AccountGate() {
       }
     };
     void restore().finally(() => setBooting(false));
-  }, [refreshFromCloud]);
+  }, [pullFromCloud]);
 
   const notesChanged = React.useCallback((notes: VaultPayload['notes']) => {
     payloadRef.current = { ...payloadRef.current, notes };
@@ -139,7 +145,7 @@ export function AccountGate() {
     await rememberVaultSession(reply.usernameKey, key, credentials.verifier);
     const encrypted = await encryptVault(payload, key, revision);
     await saveLocalVault({ ...encrypted, username: reply.username, usernameKey: reply.usernameKey, encryptionSalt: reply.encryptionSalt });
-    const next = { username: reply.username, usernameKey: reply.usernameKey, encryptionSalt: reply.encryptionSalt, notes: payload.notes, refresh: 0 };
+    const next = { username: reply.username, usernameKey: reply.usernameKey, encryptionSalt: reply.encryptionSalt, notes: payload.notes, tombstones: payload.tombstones, refresh: 0 };
     setAccount(next); accountRef.current = next; await syncNow();
   };
 
@@ -154,7 +160,7 @@ export function AccountGate() {
     keyRef.current = key; verifierRef.current = credentials.verifier; payloadRef.current = payload; revisionRef.current = local.revision;
     localStorage.setItem('color-notes-unlocked-user', usernameKey);
     await rememberVaultSession(usernameKey, key, credentials.verifier);
-    const next = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, refresh: 0 };
+    const next = { username: local.username, usernameKey, encryptionSalt: local.encryptionSalt, notes: payload.notes, tombstones: payload.tombstones, refresh: 0 };
     accountRef.current = next; setAccount(next); setSyncStatus('offline');
   };
 
@@ -169,15 +175,19 @@ export function AccountGate() {
   }, [syncNow]);
 
   React.useEffect(() => {
-    const online = () => void syncNow();
+    const online = () => void pullFromCloud(true);
     const offline = () => setSyncStatus('offline');
+    const visible = () => { if (document.visibilityState === 'visible') void pullFromCloud(); };
+    const focused = () => void pullFromCloud();
+    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void pullFromCloud(); }, 4_000);
     window.addEventListener('online', online); window.addEventListener('offline', offline);
-    return () => { window.removeEventListener('online', online); window.removeEventListener('offline', offline); };
-  }, [syncNow]);
+    window.addEventListener('focus', focused); document.addEventListener('visibilitychange', visible);
+    return () => { window.clearInterval(interval); window.removeEventListener('online', online); window.removeEventListener('offline', offline); window.removeEventListener('focus', focused); document.removeEventListener('visibilitychange', visible); };
+  }, [pullFromCloud]);
 
   if (booting) return <div className="auth-shell"><div className="auth-loading"><span className="brand-mark"><i /><i /><i /></span><p>Opening your private vault…</p></div></div>;
   if (!account) return <AuthScreen onAuthenticated={unlock} onOfflineUnlock={offlineUnlock} />;
-  return <NotesApp initialNotes={account.notes} username={account.username} syncStatus={syncStatus} onNotesChange={notesChanged} onDeleteForever={deletedForever} onSignOut={signOut} />;
+  return <NotesApp initialNotes={account.notes} tombstones={account.tombstones} username={account.username} syncStatus={syncStatus} onNotesChange={notesChanged} onDeleteForever={deletedForever} onSignOut={signOut} />;
 }
 
 function AuthScreen({ onAuthenticated, onOfflineUnlock }: { onAuthenticated: (reply: AuthReply, credentials: Awaited<ReturnType<typeof deriveVaultCredentials>>, isNew: boolean) => Promise<void>; onOfflineUnlock: (username: string, password: string) => Promise<void> }) {
