@@ -10,6 +10,8 @@ Accounts use a unique username and password—no email address is required. The 
 
 An encrypted copy of the vault is cached in IndexedDB for offline access. After a successful sign-in, a non-extractable device key protects the remembered unlock and authentication verifier in IndexedDB—never the password itself. The app therefore stays unlocked across reloads, browser restarts, and online/offline changes, renews an expired server session automatically, and syncs pending changes after reconnection. Choosing **Sign out** removes the remembered unlock from that device. Theme and sort preferences use local storage.
 
+While the app is open, it checks for a newer encrypted vault revision every four seconds and whenever the window regains focus. Unchanged checks return only revision metadata; changed vaults are downloaded, decrypted locally, merged with pending offline edits, and reflected in the notes list. API responses are never stored in the service-worker cache.
+
 ## Note tools
 
 - Text notes, ruled notebook notes, checklists, and extendable freehand drawings with pen colors, a distinct eraser, Move/Scroll mode, brush sizes, undo, and clear
