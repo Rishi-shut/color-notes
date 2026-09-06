@@ -1,4 +1,4 @@
-const CACHE = 'color-notes-v9';
+const CACHE = 'color-notes-v10';
 const ROOT = new URL('./', self.location.href).pathname;
 const asset = (name) => new URL(name, self.registration.scope).pathname;
 const SHELL = [ROOT, asset('manifest.webmanifest'), asset('icon-192.svg'), asset('icon-512.svg')];
@@ -24,7 +24,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith(new URL('api/', self.registration.scope).pathname)) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).then((response) => { const copy = response.clone(); event.waitUntil(caches.open(CACHE).then((cache) => cache.put(ROOT, copy))); return response; }).catch(() => caches.match(ROOT)));
     return;

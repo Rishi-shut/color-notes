@@ -2,10 +2,17 @@ import { currentUser, database, methodNotAllowed, sameOrigin, type ApiRequest, t
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
+    response.setHeader('Cache-Control', 'private, no-store, max-age=0');
     const user = await currentUser(request);
     if (!user) return response.status(401).json({ error: 'Sign in required.' });
     const db = database();
     if (request.method === 'GET') {
+      const revisions = await db`SELECT revision FROM color_notes_vaults WHERE user_id = ${user.id} LIMIT 1`;
+      const revision = revisions[0] ? Number(revisions[0].revision) : 0;
+      const etag = `"${revision}"`;
+      response.setHeader('ETag', etag);
+      const knownRevision = Array.isArray(request.headers['if-none-match']) ? request.headers['if-none-match'][0] : request.headers['if-none-match'];
+      if (knownRevision === etag) return response.status(304).end();
       const rows = await db`SELECT ciphertext, iv, revision, updated_at FROM color_notes_vaults WHERE user_id = ${user.id} LIMIT 1`;
       return response.status(200).json({ vault: rows[0] ?? null });
     }

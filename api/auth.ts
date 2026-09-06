@@ -3,6 +3,7 @@ import { clearSession, createSession, currentUser, database, ensureSchema, hashV
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
+    response.setHeader('Cache-Control', 'private, no-store, max-age=0');
     if (request.method === 'GET') {
       const user = await currentUser(request);
       if (!user) return response.status(401).json({ error: 'Sign in required.' });
@@ -46,7 +47,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
         FROM color_notes_users WHERE username_key = ${normalized.key} LIMIT 1`;
       const user = rows[0] as Record<string, unknown> | undefined;
       if (!user) return response.status(401).json({ error: 'Username or password is incorrect.' });
-      if (user.locked_until && new Date(String(user.locked_until)).getTime() > Date.now()) return response.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
+      const lockedUntil = user.locked_until instanceof Date ? user.locked_until : typeof user.locked_until === 'string' || typeof user.locked_until === 'number' ? new Date(user.locked_until) : null;
+      if (lockedUntil && lockedUntil.getTime() > Date.now()) return response.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
       const valid = safeEqual(hashVerifier(body.verifier, String(user.password_salt)), String(user.password_hash));
       if (!valid) {
         const attempts = Number(user.failed_attempts ?? 0) + 1;
